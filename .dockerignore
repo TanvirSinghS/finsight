@@ -1,0 +1,12 @@
+.git
+.gitignore
+**/node_modules
+**/dist
+**/target
+**/.venv
+**/__pycache__
+**/.pytest_cache
+docs/screenshots
+.env
+.env.*
+README.md
