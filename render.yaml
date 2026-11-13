@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: finsight-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend-java/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INSIGHTS_SERVICE_URL
+        sync: false
+      - key: JWT_EXPIRATION_MINUTES
+        value: "10080"
+      - key: CURRENCY_CACHE_MINUTES
+        value: "360"
+
+  - type: web
+    name: finsight-insights
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./insights-python/Dockerfile
+    dockerContext: ./insights-python
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
