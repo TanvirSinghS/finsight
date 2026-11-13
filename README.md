@@ -28,10 +28,10 @@ FinSight is a full-stack personal finance dashboard: multi-account balances, tra
 
 | Service | URL |
 | --- | --- |
-| Frontend | _populated after deployment_ |
-| REST API | _populated after deployment_ |
-| Swagger UI | _populated after deployment_ (`/swagger-ui.html`) |
-| FastAPI docs | _populated after deployment_ (`/docs`) |
+| Frontend | https://finsight-alpha-lime.vercel.app |
+| REST API | https://finsight-api-0878.onrender.com |
+| Swagger UI | https://finsight-api-0878.onrender.com/swagger-ui.html |
+| FastAPI docs | https://finsight-insights-bhra.onrender.com/docs |
 
 The deployment uses free tiers, so the first request after idle can take 20–40 seconds. The UI shows a “waking up the free backend” banner while it waits.
 
@@ -191,6 +191,8 @@ mvn spring-boot:run
 
 Defaults work out of the box for a local PostgreSQL database named `finsight` owned by your OS user with no password. Override with `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, `INSIGHTS_SERVICE_URL`.
 
+A single `DATABASE_URL` (the form Neon and Render hand out) also works — the app parses it into the JDBC URL, username and password at startup, and `DB_URL` wins if both are set. Prefer Neon's direct (unpooled) endpoint there, since HikariCP already pools connections.
+
 ### 4. Frontend
 
 ```bash
@@ -215,6 +217,7 @@ docker compose up --build
 | --- | --- | --- |
 | `DB_URL` | backend | `jdbc:postgresql://host/db?sslmode=require` |
 | `DB_USERNAME` / `DB_PASSWORD` | backend | Neon role credentials |
+| `DATABASE_URL` | backend | single-URL form (`postgresql://user:pass@host/db?sslmode=require`); used only when `DB_URL` is unset |
 | `JWT_SECRET` | backend | random string ≥ 32 bytes |
 | `JWT_EXPIRATION_MINUTES` | backend | `10080` (7 days) |
 | `CORS_ALLOWED_ORIGINS` | backend | `https://your-app.vercel.app` |

@@ -34,3 +34,4 @@ venv/
 
 # Local data
 *.log
+.neon
