@@ -1,0 +1,1 @@
+"""FinSight analytics service package."""
