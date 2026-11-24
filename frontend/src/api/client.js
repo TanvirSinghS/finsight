@@ -3,6 +3,7 @@ const TOKEN_KEY = 'finsight.token';
 
 let inflight = 0;
 let slowTimer = null;
+let warmStarted = false;
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -11,6 +12,16 @@ export function getToken() {
 export function setToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Fire-and-forget ping so a sleeping free-tier backend starts booting while the
+ * user is still on the login screen. Runs once per page load.
+ */
+export function warmUp() {
+  if (warmStarted) return;
+  warmStarted = true;
+  fetch(`${BASE_URL}/api/health`, { headers: { Accept: 'application/json' }, cache: 'no-store' }).catch(() => {});
 }
 
 function startRequest() {

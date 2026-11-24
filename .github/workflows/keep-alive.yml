@@ -1,0 +1,29 @@
+name: Keep API awake
+
+# Render's free tier stops the API after 15 minutes without traffic, so the next
+# sign-in pays a 20-40s cold start. A ping every 10 minutes keeps it warm.
+# Delete this file (or disable the workflow) to let the service sleep again.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the health endpoint
+        run: |
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 0 --max-time 30 \
+              https://finsight-api-0878.onrender.com/api/health || true)
+            if [ "$code" = "200" ]; then
+              echo "API is awake (attempt $attempt)."
+              exit 0
+            fi
+            echo "Attempt $attempt returned HTTP '$code'; retrying in 15s."
+            sleep 15
+          done
+          echo "API did not answer with 200; it may still be starting up."
