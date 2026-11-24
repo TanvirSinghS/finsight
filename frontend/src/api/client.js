@@ -95,7 +95,7 @@ export const api = {
   post: (path, body, options) => request(path, { ...options, method: 'POST', body }),
   put: (path, body, options) => request(path, { ...options, method: 'PUT', body }),
   delete: (path, options) => request(path, { ...options, method: 'DELETE' }),
-  download: (path) => request(path, { raw: true }),
+  download: (path) => request(path, { raw: true, headers: { Accept: '*/*' } }),
 };
 
 export function queryString(params = {}) {

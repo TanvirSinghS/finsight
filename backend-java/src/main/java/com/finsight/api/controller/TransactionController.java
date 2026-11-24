@@ -81,7 +81,7 @@ public class TransactionController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/export", produces = "text/csv")
+    @GetMapping("/export")
     @Operation(summary = "Export the filtered transactions as CSV")
     public ResponseEntity<byte[]> export(
             @AuthenticationPrincipal UUID userId,

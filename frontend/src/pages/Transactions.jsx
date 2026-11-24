@@ -196,8 +196,8 @@ export default function Transactions() {
       />
 
       <section className="card p-4 sm:p-5" aria-label="Filters">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <div className="relative xl:col-span-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="relative sm:col-span-2">
             <label htmlFor="search" className="sr-only">Search transactions</label>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
             <input
@@ -234,15 +234,13 @@ export default function Transactions() {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label htmlFor="from-filter" className="sr-only">From date</label>
-              <input id="from-filter" type="date" className="input" value={filters.from} onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))} aria-label="From date" />
-            </div>
-            <div>
-              <label htmlFor="to-filter" className="sr-only">To date</label>
-              <input id="to-filter" type="date" className="input" value={filters.to} onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))} aria-label="To date" />
-            </div>
+          <div className="min-w-0">
+            <label htmlFor="from-filter" className="sr-only">From date</label>
+            <input id="from-filter" type="date" className="input" value={filters.from} onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))} aria-label="From date" />
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="to-filter" className="sr-only">To date</label>
+            <input id="to-filter" type="date" className="input" value={filters.to} onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))} aria-label="To date" />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
