@@ -44,6 +44,7 @@ export default function Insights() {
   useEffect(load, [load]);
 
   const currency = user?.baseCurrency || 'USD';
+  const comingSoon = Boolean(data) && !data.available;
   const axisColor = theme === 'dark' ? '#94a3b8' : '#64748b';
   const tooltipStyle = {
     backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
@@ -69,8 +70,8 @@ export default function Insights() {
     <>
       <PageHeader
         title="AI insights"
-        description="Forecasts, anomalies and plain-language takeaways from your last six months."
-        actions={<button type="button" className="btn-secondary" onClick={load} disabled={loading}><RefreshCw className={classNames('h-4 w-4', loading && 'animate-spin')} aria-hidden="true" /> Refresh</button>}
+        description={comingSoon ? undefined : 'Forecasts, anomalies and plain-language takeaways from your last six months.'}
+        actions={comingSoon ? undefined : <button type="button" className="btn-secondary" onClick={load} disabled={loading}><RefreshCw className={classNames('h-4 w-4', loading && 'animate-spin')} aria-hidden="true" /> Refresh</button>}
       />
 
       {error ? (
@@ -84,16 +85,8 @@ export default function Insights() {
           <SkeletonBlock className="h-60" />
         </div>
       ) : !data?.available ? (
-        <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
-            <Sparkles className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Coming soon</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
-              AI forecasting, anomaly detection and plain-language takeaways are on the way. Your dashboard and budgets work exactly the same meanwhile.
-            </p>
-          </div>
+        <div className="card grid min-h-[50vh] place-items-center px-6 py-14">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Coming Soon</h2>
         </div>
       ) : (
         <>
