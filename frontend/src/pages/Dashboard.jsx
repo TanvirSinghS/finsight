@@ -41,6 +41,8 @@ export default function Dashboard() {
     fontSize: 12,
     color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
   };
+  const tooltipItemStyle = { color: theme === 'dark' ? '#e2e8f0' : '#0f172a' };
+  const tooltipLabelStyle = { color: theme === 'dark' ? '#94a3b8' : '#475569', fontWeight: 600 };
 
   if (error) {
     return (
@@ -145,7 +147,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value) => `${Math.round(value / 1000)}k`} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [formatCurrency(value, currency), name]} />
+                  <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(value, name) => [formatCurrency(value, currency), name]} />
                   <Legend wrapperStyle={{ fontSize: 12, color: axisColor }} />
                   <Area type="monotone" dataKey="income" name="Income" stroke="#10b981" strokeWidth={2} fill="url(#incomeFill)" />
                   <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={2} fill="url(#expenseFill)" />
@@ -177,7 +179,7 @@ export default function Dashboard() {
                           <Cell key={entry.categoryId} fill={entry.color || '#6366f1'} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={tooltipStyle} formatter={(value) => formatCurrency(value, currency)} />
+                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(value) => formatCurrency(value, currency)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -203,7 +205,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} horizontal={false} />
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" width={82} tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: theme === 'dark' ? 'rgba(51,65,85,.35)' : 'rgba(241,245,249,.8)' }} formatter={(value) => [formatCurrency(value, currency), 'Spent']} />
+                  <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={{ fill: theme === 'dark' ? 'rgba(51,65,85,.35)' : 'rgba(241,245,249,.8)' }} formatter={(value) => [formatCurrency(value, currency), 'Spent']} />
                   <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={14}>
                     {data.topCategories.map((entry) => (
                       <Cell key={entry.categoryId} fill={entry.color || '#6366f1'} />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  AlertTriangle, ArrowDownRight, ArrowUpRight, Brain, Info, Lightbulb, RefreshCw, Sparkles, TrendingDown, TrendingUp,
+  AlertTriangle, ArrowDownRight, ArrowUpRight, Info, Lightbulb, RefreshCw, Sparkles, TrendingDown, TrendingUp,
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api/client.js';
@@ -50,7 +50,10 @@ export default function Insights() {
     border: `1px solid ${theme === 'dark' ? '#1e293b' : '#e2e8f0'}`,
     borderRadius: 12,
     fontSize: 12,
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
   };
+  const tooltipItemStyle = { color: theme === 'dark' ? '#e2e8f0' : '#0f172a' };
+  const tooltipLabelStyle = { color: theme === 'dark' ? '#94a3b8' : '#475569', fontWeight: 600 };
 
   const forecast = data?.forecast || [];
   const anomalies = data?.anomalies || [];
@@ -82,14 +85,15 @@ export default function Insights() {
         </div>
       ) : !data?.available ? (
         <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
-            <Brain className="h-6 w-6" aria-hidden="true" />
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+            <Sparkles className="h-6 w-6" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">The analytics engine is offline</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">{data?.message}</p>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Coming soon</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
+              AI forecasting, anomaly detection and plain-language takeaways are on the way. Your dashboard and budgets work exactly the same meanwhile.
+            </p>
           </div>
-          <button type="button" className="btn-secondary" onClick={load}>Try again</button>
         </div>
       ) : (
         <>
@@ -183,7 +187,7 @@ export default function Insights() {
                       <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} vertical={false} />
                       <XAxis dataKey="name" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} interval={0} angle={-12} textAnchor="end" height={48} />
                       <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(value) => `${Math.round(value / 1000)}k`} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={(value) => formatCurrency(value, currency)} />
+                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(value) => formatCurrency(value, currency)} />
                       <Bar dataKey="last" name="Last month" fill="#94a3b8" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="forecast" name="Forecast" fill="#6366f1" radius={[4, 4, 0, 0]} />
                     </BarChart>
