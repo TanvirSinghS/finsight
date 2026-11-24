@@ -85,8 +85,20 @@ export default function Insights() {
           <SkeletonBlock className="h-60" />
         </div>
       ) : !data?.available ? (
-        <div className="card grid min-h-[50vh] place-items-center px-6 py-14">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Coming Soon</h2>
+        <div className="card relative grid min-h-[50vh] place-items-center overflow-hidden px-6 py-16 text-center">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-500/20 blur-3xl dark:bg-brand-500/15" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-28 right-8 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden="true" />
+          <div className="relative flex animate-fade-in flex-col items-center">
+            <span className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-500 text-white shadow-lg shadow-brand-500/30 ring-1 ring-white/20">
+              <Sparkles className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <h2 className="mt-6 bg-gradient-to-r from-brand-600 via-brand-500 to-emerald-500 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent dark:from-brand-300 dark:via-brand-400 dark:to-emerald-300 sm:text-4xl">
+              Coming Soon
+            </h2>
+            <div className="mt-6 h-1.5 w-40 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-gradient-to-r from-brand-500 to-emerald-500" aria-hidden="true" />
+            </div>
+          </div>
         </div>
       ) : (
         <>
