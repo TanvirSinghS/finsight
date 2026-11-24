@@ -36,12 +36,22 @@ export function StatCard({ label, value, hint, icon: Icon, tone = 'brand', loadi
     rose: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300',
     amber: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
   };
+  const glows = {
+    brand: 'bg-brand-500/20',
+    emerald: 'bg-emerald-500/20',
+    rose: 'bg-rose-500/20',
+    amber: 'bg-amber-500/25',
+  };
   return (
-    <article className="card p-5">
-      <div className="flex items-start justify-between gap-3">
+    <article className="card relative overflow-hidden p-5 transition hover:shadow-lg hover:shadow-slate-900/5 dark:hover:shadow-black/20">
+      <span
+        className={classNames('pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl', glows[tone])}
+        aria-hidden="true"
+      />
+      <div className="relative flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
         {Icon && (
-          <span className={classNames('grid h-9 w-9 place-items-center rounded-xl', tones[tone])}>
+          <span className={classNames('grid h-9 w-9 place-items-center rounded-xl ring-1 ring-inset ring-current/10', tones[tone])}>
             <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
           </span>
         )}

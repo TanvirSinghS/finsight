@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
+  Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
@@ -163,7 +163,13 @@ export default function Dashboard() {
               <EmptyState title="No spending yet" description="Expenses this month will appear here." />
             ) : (
               <>
-                <div className="h-48">
+                <div className="relative h-48">
+                  <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
+                    <div className="text-center leading-tight">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Spent</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(data.monthlyExpense, currency)}</p>
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -194,26 +200,6 @@ export default function Dashboard() {
                 </ul>
               </>
             )}
-          </section>
-
-          <section className="card flex flex-col p-5" aria-label="Top categories">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Top categories</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Largest spends this month</p>
-            <div className="mt-3 min-h-[224px] flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.topCategories} layout="vertical" margin={{ left: 8, right: 12, top: 4, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={82} tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={{ fill: theme === 'dark' ? 'rgba(51,65,85,.35)' : 'rgba(241,245,249,.8)' }} formatter={(value) => [formatCurrency(value, currency), 'Spent']} />
-                  <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={14}>
-                    {data.topCategories.map((entry) => (
-                      <Cell key={entry.categoryId} fill={entry.color || '#6366f1'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </section>
 
           <section className="card p-5 lg:col-span-2" aria-label="Recent transactions">
