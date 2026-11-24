@@ -66,12 +66,22 @@ export function StatCard({ label, value, hint, icon: Icon, tone = 'brand', loadi
   );
 }
 
+export function budgetTone(percentUsed) {
+  const value = Number(percentUsed) || 0;
+  if (value > 100) return 'rose';
+  if (value >= 80) return 'orange';
+  if (value >= 60) return 'yellow';
+  return 'emerald';
+}
+
 export function ProgressBar({ value, tone = 'brand', label }) {
   const clamped = Math.min(100, Math.max(0, Number(value) || 0));
   const tones = {
     brand: 'bg-brand-500',
     emerald: 'bg-emerald-500',
+    yellow: 'bg-yellow-400',
     amber: 'bg-amber-500',
+    orange: 'bg-orange-500',
     rose: 'bg-rose-500',
   };
   return (

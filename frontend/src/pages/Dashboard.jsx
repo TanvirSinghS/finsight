@@ -8,10 +8,17 @@ import {
   ArrowDownRight, ArrowUpRight, ArrowRightLeft, PiggyBank, Plus, Sparkles, TrendingUp, Wallet,
 } from 'lucide-react';
 import { api } from '../api/client.js';
-import { EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonBlock, StatCard } from '../components/ui.jsx';
+import { budgetTone, EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonBlock, StatCard } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { formatCurrency, formatDate, formatMonth } from '../utils/format.js';
+
+const percentTones = {
+  emerald: 'font-semibold text-emerald-600 dark:text-emerald-400',
+  yellow: 'font-semibold text-yellow-600 dark:text-yellow-400',
+  orange: 'font-semibold text-orange-600 dark:text-orange-400',
+  rose: 'font-semibold text-rose-600 dark:text-rose-400',
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -258,21 +265,22 @@ export default function Dashboard() {
               </p>
             ) : (
               <ul className="space-y-4">
-                {data.budgetAlerts.map((alert) => (
+                {data.budgetAlerts.map((alert) => {
+                  const tone = budgetTone(alert.percentUsed);
+                  return (
                   <li key={alert.budgetId}>
                     <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
                       <span className="font-medium text-slate-700 dark:text-slate-200">{alert.categoryName}</span>
-                      <span className={alert.overBudget ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}>
-                        {alert.percentUsed}%
-                      </span>
+                      <span className={percentTones[tone]}>{alert.percentUsed}%</span>
                     </div>
-                    <ProgressBar value={alert.percentUsed} tone={alert.overBudget ? 'rose' : 'amber'} label={`${alert.categoryName} budget usage`} />
+                    <ProgressBar value={alert.percentUsed} tone={tone} label={`${alert.categoryName} budget usage`} />
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {formatCurrency(alert.spent, currency)} of {formatCurrency(alert.amount, currency)}
                       {alert.overBudget && <span className="ml-1 font-semibold text-rose-600 dark:text-rose-400">over budget</span>}
                     </p>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </section>

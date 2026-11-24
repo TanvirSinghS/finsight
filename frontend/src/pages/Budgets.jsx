@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client.js';
-import { EmptyState, ErrorState, Modal, PageHeader, ProgressBar, SkeletonBlock } from '../components/ui.jsx';
+import { budgetTone, EmptyState, ErrorState, Modal, PageHeader, ProgressBar, SkeletonBlock } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { currentMonthValue, formatCurrency, formatMonth } from '../utils/format.js';
@@ -136,7 +136,7 @@ export default function Budgets() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {budgets.map((budget) => {
-            const tone = budget.overBudget ? 'rose' : budget.nearLimit ? 'amber' : 'emerald';
+            const tone = budgetTone(budget.percentUsed);
             return (
               <article key={budget.id} className="card flex flex-col p-5">
                 <div className="flex items-start justify-between gap-2">

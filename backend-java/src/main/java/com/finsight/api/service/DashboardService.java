@@ -51,7 +51,7 @@ public class DashboardService {
 
         List<MonthlyPoint> trend = monthlyTrend(userId, current.minusMonths(5));
         List<BudgetAlert> alerts = budgetService.list(userId, current.toString()).stream()
-                .filter(b -> b.percentUsed() >= 80)
+                .filter(b -> b.percentUsed() >= 60)
                 .map(this::toAlert)
                 .toList();
 
