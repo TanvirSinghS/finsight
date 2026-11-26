@@ -1,6 +1,7 @@
 package com.finsight.api.service;
 
 import com.finsight.api.domain.*;
+import com.finsight.api.dto.BudgetDtos.BudgetHistoryEntry;
 import com.finsight.api.dto.BudgetDtos.BudgetRequest;
 import com.finsight.api.dto.BudgetDtos.BudgetResponse;
 import com.finsight.api.exception.ApiException;
@@ -15,6 +16,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,76 @@ public class BudgetService {
             spend.put((UUID) row[0], ((BigDecimal) row[1]).setScale(2, RoundingMode.HALF_UP));
         }
         return spend;
+    }
+
+    /**
+     * Past months' budgets against actual spend, newest first. Only months that had
+     * at least one budget appear, so the page shows real history instead of gaps.
+     */
+    @Transactional(readOnly = true)
+    public List<BudgetHistoryEntry> history(UUID userId, Integer months) {
+        int count = months == null ? 6 : Math.max(1, Math.min(24, months));
+        YearMonth current = YearMonth.now();
+        YearMonth first = current.minusMonths(count);
+        YearMonth last = current.minusMonths(1);
+
+        List<Budget> budgets = budgetRepository.findByUserIdAndPeriodStartBetweenOrderByPeriodStartAsc(
+                userId, first.atDay(1), last.atEndOfMonth());
+
+        Map<String, Map<UUID, BigDecimal>> spendByMonth = new HashMap<>();
+        for (Object[] row : transactionRepository.monthlySpendByCategory(userId, first.atDay(1))) {
+            String month = (String) row[2];
+            if (month.compareTo(last.toString()) > 0) {
+                continue;
+            }
+            spendByMonth.computeIfAbsent(month, key -> new HashMap<>())
+                    .put((UUID) row[0], money(row[3]));
+        }
+
+        Map<YearMonth, List<Budget>> grouped = new HashMap<>();
+        for (Budget budget : budgets) {
+            grouped.computeIfAbsent(YearMonth.from(budget.getPeriodStart()), key -> new ArrayList<>()).add(budget);
+        }
+
+        List<BudgetHistoryEntry> entries = new ArrayList<>();
+        for (YearMonth month = last; !month.isBefore(first); month = month.minusMonths(1)) {
+            List<Budget> monthBudgets = grouped.get(month);
+            if (monthBudgets == null || monthBudgets.isEmpty()) {
+                continue;
+            }
+            Map<UUID, BigDecimal> spend = spendByMonth.getOrDefault(month.toString(), Map.of());
+            BigDecimal budgeted = BigDecimal.ZERO;
+            BigDecimal spent = BigDecimal.ZERO;
+            int overCount = 0;
+            List<String> overCategories = new ArrayList<>();
+            for (Budget budget : monthBudgets) {
+                BigDecimal categorySpend = spend.getOrDefault(budget.getCategory().getId(), money(null));
+                budgeted = budgeted.add(budget.getAmount());
+                spent = spent.add(categorySpend);
+                if (categorySpend.compareTo(budget.getAmount()) > 0) {
+                    overCount++;
+                    overCategories.add(budget.getCategory().getName());
+                }
+            }
+            budgeted = budgeted.setScale(2, RoundingMode.HALF_UP);
+            spent = spent.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal remaining = budgeted.subtract(spent);
+            int percent = budgeted.signum() == 0 ? 0
+                    : spent.multiply(BigDecimal.valueOf(100)).divide(budgeted, 0, RoundingMode.HALF_UP).intValue();
+            entries.add(new BudgetHistoryEntry(month.toString(), budgeted, spent, remaining, percent,
+                    overCount == 0, monthBudgets.size(), overCount, List.copyOf(overCategories)));
+        }
+        return entries;
+    }
+
+    private BigDecimal money(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (value instanceof BigDecimal decimal) {
+            return decimal.setScale(2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.valueOf(((Number) value).doubleValue()).setScale(2, RoundingMode.HALF_UP);
     }
 
     @Transactional

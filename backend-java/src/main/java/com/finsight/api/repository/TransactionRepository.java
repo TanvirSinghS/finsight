@@ -68,6 +68,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> spendingByCategory(@Param("userId") UUID userId,
                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
 
+    /** GROUP BY report: income vs expense per day, used for the short cashflow ranges. */
+    @Query(value = """
+            SELECT to_char(t.occurred_on, 'YYYY-MM-DD') AS day,
+                   COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount_base ELSE 0 END), 0) AS income,
+                   COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount_base ELSE 0 END), 0) AS expenses
+            FROM transactions t
+            WHERE t.user_id = :userId AND t.occurred_on BETWEEN :from AND :to
+            GROUP BY 1
+            ORDER BY 1
+            """, nativeQuery = true)
+    List<Object[]> dailyCashflow(@Param("userId") UUID userId,
+                                 @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     /** GROUP BY report: income vs expense per month. */
     @Query(value = """
             SELECT to_char(date_trunc('month', t.occurred_on), 'YYYY-MM') AS month,

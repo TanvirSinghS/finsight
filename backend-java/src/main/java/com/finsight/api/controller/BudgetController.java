@@ -1,5 +1,6 @@
 package com.finsight.api.controller;
 
+import com.finsight.api.dto.BudgetDtos.BudgetHistoryEntry;
 import com.finsight.api.dto.BudgetDtos.BudgetRequest;
 import com.finsight.api.dto.BudgetDtos.BudgetResponse;
 import com.finsight.api.service.BudgetService;
@@ -29,6 +30,13 @@ public class BudgetController {
     public List<BudgetResponse> list(@AuthenticationPrincipal UUID userId,
                                      @RequestParam(required = false) String month) {
         return budgetService.list(userId, month);
+    }
+
+    @GetMapping("/history")
+    @Operation(summary = "Past months: whether budgets were met (months 1-24, defaults to 6)")
+    public List<BudgetHistoryEntry> history(@AuthenticationPrincipal UUID userId,
+                                            @RequestParam(required = false) Integer months) {
+        return budgetService.history(userId, months);
     }
 
     @PostMapping

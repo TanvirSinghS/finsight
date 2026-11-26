@@ -5,6 +5,7 @@ import com.finsight.api.domain.User;
 import com.finsight.api.dto.AccountDtos.AccountResponse;
 import com.finsight.api.dto.BudgetDtos.BudgetResponse;
 import com.finsight.api.dto.DashboardDtos.*;
+import com.finsight.api.exception.ApiException;
 import com.finsight.api.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,10 +14,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class DashboardService {
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
     private final BudgetService budgetService;
@@ -62,6 +66,88 @@ public class DashboardService {
                 accounts.size(), byCategory, topCategories, trend, alerts,
                 transactionRepository.findTop8ByUserIdOrderByOccurredOnDescCreatedAtDesc(userId).stream()
                         .map(TransactionService::toResponse).toList());
+    }
+
+    /**
+     * Cashflow series for the dashboard range picker. Short ranges bucket by day or
+     * week, longer ranges by month — each bucket carries income and expenses only,
+     * so the chart never has to aggregate on the client.
+     */
+    @Transactional(readOnly = true)
+    public CashflowResponse cashflow(UUID userId, String range) {
+        String key = range == null || range.isBlank() ? "6m" : range.trim().toLowerCase(Locale.ROOT);
+        LocalDate today = LocalDate.now();
+        YearMonth current = YearMonth.from(today);
+        return switch (key) {
+            case "1w" -> new CashflowResponse(key, today.minusDays(6), today,
+                    dailyPoints(userId, today.minusDays(6), today,
+                            DateTimeFormatter.ofPattern("EEE d", Locale.ENGLISH)));
+            case "1m" -> new CashflowResponse(key, today.minusDays(29), today,
+                    dailyPoints(userId, today.minusDays(29), today,
+                            DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)));
+            case "3m" -> new CashflowResponse(key, today.minusWeeks(12), today,
+                    weeklyPoints(userId, today.minusWeeks(12), today));
+            case "6m" -> new CashflowResponse(key, current.minusMonths(5).atDay(1), today,
+                    monthlyPoints(userId, current.minusMonths(5), current, "MMM"));
+            case "1y" -> new CashflowResponse(key, current.minusMonths(11).atDay(1), today,
+                    monthlyPoints(userId, current.minusMonths(11), current, "MMM yy"));
+            default -> throw ApiException.badRequest("Range must be one of 1w, 1m, 3m, 6m, 1y.");
+        };
+    }
+
+    private List<CashflowPoint> dailyPoints(UUID userId, LocalDate from, LocalDate to, DateTimeFormatter format) {
+        Map<LocalDate, BigDecimal[]> byDay = cashflowByDay(userId, from, to);
+        List<CashflowPoint> points = new ArrayList<>();
+        for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            BigDecimal[] values = byDay.get(day);
+            points.add(new CashflowPoint(day.format(format),
+                    values == null ? ZERO : values[0], values == null ? ZERO : values[1]));
+        }
+        return points;
+    }
+
+    private List<CashflowPoint> weeklyPoints(UUID userId, LocalDate from, LocalDate to) {
+        Map<LocalDate, BigDecimal[]> byDay = cashflowByDay(userId, from, to);
+        DateTimeFormatter format = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
+        List<CashflowPoint> points = new ArrayList<>();
+        for (LocalDate weekStart = from; !weekStart.isAfter(to); weekStart = weekStart.plusWeeks(1)) {
+            LocalDate weekEnd = weekStart.plusDays(6).isAfter(to) ? to : weekStart.plusDays(6);
+            BigDecimal income = ZERO;
+            BigDecimal expenses = ZERO;
+            for (LocalDate day = weekStart; !day.isAfter(weekEnd); day = day.plusDays(1)) {
+                BigDecimal[] values = byDay.get(day);
+                if (values != null) {
+                    income = income.add(values[0]);
+                    expenses = expenses.add(values[1]);
+                }
+            }
+            points.add(new CashflowPoint(weekStart.format(format),
+                    income.setScale(2, RoundingMode.HALF_UP), expenses.setScale(2, RoundingMode.HALF_UP)));
+        }
+        return points;
+    }
+
+    private List<CashflowPoint> monthlyPoints(UUID userId, YearMonth first, YearMonth last, String pattern) {
+        Map<String, BigDecimal[]> byMonth = new HashMap<>();
+        for (Object[] row : transactionRepository.monthlyCashflow(userId, first.atDay(1))) {
+            byMonth.put((String) row[0], new BigDecimal[]{money(row[1]), money(row[2])});
+        }
+        DateTimeFormatter format = DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH);
+        List<CashflowPoint> points = new ArrayList<>();
+        for (YearMonth month = first; !month.isAfter(last); month = month.plusMonths(1)) {
+            BigDecimal[] values = byMonth.get(month.toString());
+            points.add(new CashflowPoint(month.atDay(1).format(format),
+                    values == null ? ZERO : values[0], values == null ? ZERO : values[1]));
+        }
+        return points;
+    }
+
+    private Map<LocalDate, BigDecimal[]> cashflowByDay(UUID userId, LocalDate from, LocalDate to) {
+        Map<LocalDate, BigDecimal[]> byDay = new HashMap<>();
+        for (Object[] row : transactionRepository.dailyCashflow(userId, from, to)) {
+            byDay.put(LocalDate.parse((String) row[0]), new BigDecimal[]{money(row[1]), money(row[2])});
+        }
+        return byDay;
     }
 
     private List<CategorySpend> spendingByCategory(UUID userId, LocalDate start, LocalDate end, BigDecimal total) {

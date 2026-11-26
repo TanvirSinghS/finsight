@@ -1,6 +1,7 @@
 package com.finsight.api.repository;
 
 import com.finsight.api.domain.Budget;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
@@ -18,4 +19,8 @@ public interface BudgetRepository extends JpaRepository<Budget, UUID> {
     boolean existsByUserIdAndCategoryIdAndPeriodStart(UUID userId, UUID categoryId, LocalDate periodStart);
 
     List<Budget> findByUserIdAndPeriodStart(UUID userId, LocalDate periodStart);
+
+    /** History: every budget in a month range, with categories fetched eagerly. */
+    @EntityGraph(attributePaths = {"category"})
+    List<Budget> findByUserIdAndPeriodStartBetweenOrderByPeriodStartAsc(UUID userId, LocalDate from, LocalDate to);
 }

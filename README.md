@@ -249,6 +249,7 @@ Base path `/api`. All routes except auth, health and currency require `Authoriza
 | `GET` | `/transactions/export` | CSV of the current filter |
 | `POST` | `/transactions/import` | Multipart CSV import |
 | `GET` | `/budgets?month=YYYY-MM` | Budgets with live spend |
+| `GET` | `/budgets/history?months=6` | Past months: budgeted vs spent, and whether each month was met |
 | `POST` / `PUT` / `DELETE` | `/budgets`, `/budgets/{id}` | Manage budgets |
 | `GET` | `/goals` | Savings goals |
 | `POST` / `PUT` / `DELETE` | `/goals`, `/goals/{id}` | Manage goals |
@@ -257,6 +258,7 @@ Base path `/api`. All routes except auth, health and currency require `Authoriza
 | `POST` / `PUT` / `DELETE` | `/recurring`, `/recurring/{id}` | Manage schedules |
 | `POST` | `/recurring/run-due` | Post due items immediately |
 | `GET` | `/dashboard` | Aggregated dashboard payload |
+| `GET` | `/dashboard/cashflow?range=6m` | Income vs expenses for `1w`, `1m`, `3m`, `6m` or `1y` |
 | `GET` | `/insights/overview` | Forecast, anomalies, insights |
 | `POST` | `/insights/categorize` | Suggest a category for a description |
 | `GET` | `/currency/rates?base=USD` | Cached FX rates |

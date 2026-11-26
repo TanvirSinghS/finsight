@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public final class BudgetDtos {
@@ -20,5 +21,11 @@ public final class BudgetDtos {
             UUID id, UUID categoryId, String categoryName, String categoryColor, LocalDate periodStart,
             BigDecimal amount, BigDecimal spent, BigDecimal remaining, int percentUsed, boolean overBudget,
             boolean nearLimit) {
+    }
+
+    /** One past month: whether every budget stayed within its ceiling. */
+    public record BudgetHistoryEntry(
+            String month, BigDecimal budgeted, BigDecimal spent, BigDecimal remaining, int percentUsed,
+            boolean metBudget, int budgetCount, int overCount, List<String> overCategories) {
     }
 }

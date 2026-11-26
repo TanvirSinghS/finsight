@@ -7,11 +7,19 @@ import {
 import {
   ArrowDownRight, ArrowUpRight, ArrowRightLeft, PiggyBank, Plus, Sparkles, TrendingUp, Wallet,
 } from 'lucide-react';
-import { fetchDashboard, readDashboardCache } from '../api/client.js';
-import { budgetTone, EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonBlock, StatCard } from '../components/ui.jsx';
+import { api, fetchDashboard, readDashboardCache } from '../api/client.js';
+import { budgetTone, EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonBlock, Spinner, StatCard } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
-import { formatCurrency, formatDate, formatMonth } from '../utils/format.js';
+import { formatCompact, formatCurrency, formatDate, formatMonth } from '../utils/format.js';
+
+const CASHFLOW_RANGES = [
+  { value: '1w', label: '1 week' },
+  { value: '1m', label: '1 month' },
+  { value: '3m', label: '3 months' },
+  { value: '6m', label: '6 months' },
+  { value: '1y', label: '1 year' },
+];
 
 const percentTones = {
   emerald: 'font-semibold text-emerald-600 dark:text-emerald-400',
@@ -28,6 +36,11 @@ export default function Dashboard() {
   const hadCachedData = useRef(data !== null);
   const [loading, setLoading] = useState(!hadCachedData.current);
   const [error, setError] = useState('');
+  const [range, setRange] = useState('6m');
+  const [cashflow, setCashflow] = useState(null);
+  const [cashflowLoading, setCashflowLoading] = useState(false);
+  const [cashflowError, setCashflowError] = useState('');
+  const cashflowCache = useRef({});
 
   const load = useCallback(({ silent = false } = {}) => {
     if (!silent) {
@@ -48,6 +61,42 @@ export default function Dashboard() {
   useEffect(() => {
     load({ silent: hadCachedData.current });
   }, [load]);
+
+  // The dashboard payload already carries six months; other ranges are fetched
+  // on demand and cached so flipping back is instant.
+  useEffect(() => {
+    if (range === '6m') {
+      setCashflow(cashflowCache.current['6m'] || null);
+      setCashflowError('');
+      setCashflowLoading(false);
+      return undefined;
+    }
+    const cached = cashflowCache.current[range];
+    if (cached) {
+      setCashflow(cached);
+      setCashflowError('');
+      setCashflowLoading(false);
+      return undefined;
+    }
+    let active = true;
+    setCashflowLoading(true);
+    setCashflowError('');
+    api
+      .get(`/api/dashboard/cashflow?range=${range}`)
+      .then((payload) => {
+        cashflowCache.current[range] = payload.points;
+        if (active) setCashflow(payload.points);
+      })
+      .catch((err) => {
+        if (active) setCashflowError(err.message);
+      })
+      .finally(() => {
+        if (active) setCashflowLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [range]);
 
   const currency = data?.currency || user?.baseCurrency || 'USD';
   const axisColor = theme === 'dark' ? '#94a3b8' : '#64748b';
@@ -70,10 +119,12 @@ export default function Dashboard() {
     );
   }
 
-  const trend = (data?.monthlyTrend || []).map((point) => ({
+  const fallbackTrend = (data?.monthlyTrend || []).map((point) => ({
     ...point,
     label: formatMonth(point.month).split(' ')[0],
   }));
+  const trend = cashflow || fallbackTrend;
+  const rangeLabel = CASHFLOW_RANGES.find((option) => option.value === range)?.label || '6 months';
   const hasData = data && (data.recentTransactions.length > 0 || data.monthlyExpense > 0);
 
   return (
@@ -141,14 +192,32 @@ export default function Dashboard() {
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           <section className="card p-5 lg:col-span-2" aria-label="Income versus expenses">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-white">Cashflow trend</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Income vs expenses, last 6 months</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Income vs expenses, last {rangeLabel}</p>
               </div>
-              <span className="badge bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">6 months</span>
+              <div className="flex items-center gap-2">
+                {cashflowLoading && <Spinner className="h-4 w-4 text-slate-400" />}
+                <label htmlFor="cashflow-range" className="sr-only">Cashflow range</label>
+                <select
+                  id="cashflow-range"
+                  className="input w-auto py-1.5 text-sm"
+                  value={range}
+                  onChange={(event) => setRange(event.target.value)}
+                >
+                  {CASHFLOW_RANGES.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="h-64">
+            {cashflowError && (
+              <p className="mb-2 text-xs text-rose-600 dark:text-rose-400" role="alert">
+                Could not load this range: {cashflowError}
+              </p>
+            )}
+            <div className={`h-64 transition-opacity ${cashflowLoading ? 'opacity-50' : ''}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
                   <defs>
@@ -162,8 +231,8 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value) => `${Math.round(value / 1000)}k`} />
+                  <XAxis dataKey="label" tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={20} />
+                  <YAxis tick={{ fill: axisColor, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value) => formatCompact(value, currency)} />
                   <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(value, name) => [formatCurrency(value, currency), name]} />
                   <Legend wrapperStyle={{ fontSize: 12, color: axisColor }} />
                   <Area type="monotone" dataKey="income" name="Income" stroke="#10b981" strokeWidth={2} fill="url(#incomeFill)" />
