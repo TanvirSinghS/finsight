@@ -45,6 +45,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                             @Param("categoryId") UUID categoryId,
                             @Param("from") LocalDate from, @Param("to") LocalDate to);
 
+    /** Spend per category for a window — replaces a query per budget. */
+    @Query("""
+            SELECT t.category.id, COALESCE(SUM(t.amountBase), 0) FROM Transaction t
+            WHERE t.user.id = :userId AND t.type = :type
+              AND t.occurredOn BETWEEN :from AND :to
+            GROUP BY t.category.id
+            """)
+    List<Object[]> sumByCategoryGrouped(@Param("userId") UUID userId, @Param("type") TransactionType type,
+                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     /** GROUP BY report: spending per category for a date window. */
     @Query(value = """
             SELECT c.id, c.name, c.color, SUM(t.amount_base) AS total, COUNT(*) AS tx_count

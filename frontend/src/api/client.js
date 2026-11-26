@@ -1,9 +1,10 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const TOKEN_KEY = 'finsight.token';
+const DASHBOARD_KEY = 'finsight.dashboard';
+const DASHBOARD_CACHE_MS = 10 * 60 * 1000;
 
-let inflight = 0;
-let slowTimer = null;
 let warmStarted = false;
+let dashboardRequest = null;
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -24,69 +25,96 @@ export function warmUp() {
   fetch(`${BASE_URL}/api/health`, { headers: { Accept: 'application/json' }, cache: 'no-store' }).catch(() => {});
 }
 
-function startRequest() {
-  inflight += 1;
-  if (inflight === 1 && !slowTimer) {
-    slowTimer = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('finsight:slow', { detail: true }));
-    }, 3500);
-  }
-}
-
-function endRequest() {
-  inflight = Math.max(0, inflight - 1);
-  if (inflight === 0) {
-    if (slowTimer) clearTimeout(slowTimer);
-    slowTimer = null;
-    window.dispatchEvent(new CustomEvent('finsight:slow', { detail: false }));
-  }
-}
-
 async function request(path, { method = 'GET', body, headers = {}, raw = false, signal } = {}) {
   const token = getToken();
   const isForm = body instanceof FormData;
-  startRequest();
-  try {
-    const response = await fetch(`${BASE_URL}${path}`, {
-      method,
-      signal,
-      headers: {
-        Accept: 'application/json',
-        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
-      },
-      body: isForm ? body : body ? JSON.stringify(body) : undefined,
-    });
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method,
+    signal,
+    headers: {
+      Accept: 'application/json',
+      ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body: isForm ? body : body ? JSON.stringify(body) : undefined,
+  });
 
-    if (response.status === 401) {
-      setToken(null);
-      window.dispatchEvent(new CustomEvent('finsight:unauthorized'));
-    }
+  if (response.status === 401) {
+    setToken(null);
+    window.dispatchEvent(new CustomEvent('finsight:unauthorized'));
+  }
 
-    if (!response.ok) {
-      let message = `Request failed (${response.status})`;
-      try {
-        const data = await response.json();
-        message = data.message || message;
-        if (data.fieldErrors) {
-          const details = Object.values(data.fieldErrors).join(' ');
-          if (details) message = `${message}: ${details}`;
-        }
-      } catch {
-        /* non-JSON error body */
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const data = await response.json();
+      message = data.message || message;
+      if (data.fieldErrors) {
+        const details = Object.values(data.fieldErrors).join(' ');
+        if (details) message = `${message}: ${details}`;
       }
-      const error = new Error(message);
-      error.status = response.status;
-      throw error;
+    } catch {
+      /* non-JSON error body */
     }
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
 
-    if (raw) return response;
-    if (response.status === 204) return null;
-    const type = response.headers.get('content-type') || '';
-    return type.includes('application/json') ? response.json() : response.text();
-  } finally {
-    endRequest();
+  if (raw) return response;
+  if (response.status === 204) return null;
+  const type = response.headers.get('content-type') || '';
+  return type.includes('application/json') ? response.json() : response.text();
+}
+
+function cacheDashboard(data) {
+  try {
+    localStorage.setItem(DASHBOARD_KEY, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* storage full or unavailable — the cache is an optimisation only */
+  }
+}
+
+/**
+ * Last dashboard payload, so a returning user sees their figures immediately
+ * instead of waiting on a cold backend. Stale data is refreshed in the
+ * background once the request completes.
+ */
+export function readDashboardCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DASHBOARD_KEY) || 'null');
+    if (!parsed?.data || Date.now() - parsed.at > DASHBOARD_CACHE_MS) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch the dashboard once per navigation burst: the login flow starts this
+ * request while the route is still changing, and the dashboard page joins the
+ * same promise instead of firing a duplicate request.
+ */
+export function fetchDashboard() {
+  if (!dashboardRequest) {
+    dashboardRequest = request('/api/dashboard')
+      .then((data) => {
+        cacheDashboard(data);
+        return data;
+      })
+      .finally(() => {
+        dashboardRequest = null;
+      });
+  }
+  return dashboardRequest;
+}
+
+export function clearDashboardCache() {
+  try {
+    localStorage.removeItem(DASHBOARD_KEY);
+  } catch {
+    /* ignore */
   }
 }
 

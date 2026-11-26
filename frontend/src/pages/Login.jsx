@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, BarChart3, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
@@ -13,16 +13,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [slow, setSlow] = useState(false);
-
-  useEffect(() => {
-    if (!loading) {
-      setSlow(false);
-      return undefined;
-    }
-    const timer = setTimeout(() => setSlow(true), 4000);
-    return () => clearTimeout(timer);
-  }, [loading]);
 
   const signIn = async (credentials) => {
     setError('');
@@ -92,11 +82,6 @@ export default function Login() {
             {loading ? <Spinner className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" aria-hidden="true" />}
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
-          {loading && slow && (
-            <p role="status" className="text-center text-xs text-slate-500 dark:text-slate-400">
-              Waking up the free backend — the first request after idle can take up to 30 seconds.
-            </p>
-          )}
         </form>
 
         <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">

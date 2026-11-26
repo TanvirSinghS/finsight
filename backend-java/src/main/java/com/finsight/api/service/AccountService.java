@@ -10,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -29,9 +31,19 @@ public class AccountService {
 
     @Transactional(readOnly = true)
     public List<AccountResponse> list(UUID userId) {
-        User user = userService.get(userId);
-        return accountRepository.findByUserIdAndArchivedFalseOrderByName(userId).stream()
-                .map(account -> toResponse(account, user))
+        return list(userService.get(userId));
+    }
+
+    /** Callers that already loaded the user (the dashboard does) skip a lookup. */
+    @Transactional(readOnly = true)
+    public List<AccountResponse> list(User user) {
+        Map<UUID, BigDecimal> netByAccount = new HashMap<>();
+        for (Object[] row : accountRepository.netByAccount(user.getId(), TransactionType.INCOME)) {
+            netByAccount.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+        return accountRepository.findByUserIdAndArchivedFalseOrderByName(user.getId()).stream()
+                .map(account -> toResponse(account, user,
+                        netByAccount.getOrDefault(account.getId(), BigDecimal.ZERO)))
                 .toList();
     }
 
@@ -84,7 +96,11 @@ public class AccountService {
     }
 
     private AccountResponse toResponse(Account account, User user) {
-        BigDecimal net = accountRepository.netForAccount(account.getId(), TransactionType.INCOME);
+        return toResponse(account, user,
+                accountRepository.netForAccount(account.getId(), TransactionType.INCOME));
+    }
+
+    private AccountResponse toResponse(Account account, User user, BigDecimal net) {
         BigDecimal opening = currencyService.convert(account.getInitialBalance(), account.getCurrency(),
                 user.getBaseCurrency());
         BigDecimal balance = opening.add(net).setScale(2, RoundingMode.HALF_UP);

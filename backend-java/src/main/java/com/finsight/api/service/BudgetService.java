@@ -15,7 +15,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,11 +38,29 @@ public class BudgetService {
     @Transactional(readOnly = true)
     public List<BudgetResponse> list(UUID userId, String month) {
         YearMonth period = parseMonth(month);
+        return listForPeriod(userId, period, spendByCategory(userId, period));
+    }
+
+    /**
+     * Builds the month's budget rows from a spend map loaded in one grouped query, so
+     * the page costs two queries no matter how many budgets the user has.
+     */
+    @Transactional(readOnly = true)
+    public List<BudgetResponse> listForPeriod(UUID userId, YearMonth period, Map<UUID, BigDecimal> spentByCategory) {
         LocalDate start = period.atDay(1);
-        LocalDate end = period.atEndOfMonth();
         return budgetRepository.findByUserIdAndPeriodStartOrderByCategoryNameAsc(userId, start).stream()
-                .map(budget -> toResponse(budget, spentFor(userId, budget.getCategory().getId(), start, end)))
+                .map(budget -> toResponse(budget, spentByCategory.getOrDefault(budget.getCategory().getId(),
+                        BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))))
                 .toList();
+    }
+
+    private Map<UUID, BigDecimal> spendByCategory(UUID userId, YearMonth period) {
+        Map<UUID, BigDecimal> spend = new HashMap<>();
+        for (Object[] row : transactionRepository.sumByCategoryGrouped(userId, TransactionType.EXPENSE,
+                period.atDay(1), period.atEndOfMonth())) {
+            spend.put((UUID) row[0], ((BigDecimal) row[1]).setScale(2, RoundingMode.HALF_UP));
+        }
+        return spend;
     }
 
     @Transactional

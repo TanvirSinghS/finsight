@@ -23,18 +23,11 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [waking, setWaking] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const handler = (event) => setWaking(Boolean(event.detail));
-    window.addEventListener('finsight:slow', handler);
-    return () => window.removeEventListener('finsight:slow', handler);
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -104,12 +97,6 @@ export default function Layout() {
               </button>
             </div>
           </div>
-          {waking && (
-            <div role="status" className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-200 sm:px-6 lg:px-8">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" aria-hidden="true" />
-              Waking up the free backend — the first request after idle can take up to 30 seconds.
-            </div>
-          )}
         </header>
 
         <main id="main" className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

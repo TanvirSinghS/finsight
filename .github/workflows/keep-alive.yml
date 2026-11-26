@@ -1,11 +1,11 @@
 name: Keep API awake
 
-# Render's free tier stops the API after 15 minutes without traffic, so the next
-# sign-in pays a 20-40s cold start. A ping every 10 minutes keeps it warm.
-# Delete this file (or disable the workflow) to let the service sleep again.
+# Render's free tier stops a service after 15 minutes without traffic, and waking
+# it again costs tens of seconds. GitHub can delay scheduled runs, so ping every
+# 5 minutes and wait out a cold boot instead of giving up after 30s.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -14,16 +14,21 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the health endpoint
+      - name: Ping the API and insights health endpoints
         run: |
-          for attempt in 1 2 3; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 0 --max-time 30 \
-              https://finsight-api-0878.onrender.com/api/health || true)
-            if [ "$code" = "200" ]; then
-              echo "API is awake (attempt $attempt)."
-              exit 0
-            fi
-            echo "Attempt $attempt returned HTTP '$code'; retrying in 15s."
-            sleep 15
-          done
-          echo "API did not answer with 200; it may still be starting up."
+          ping() {
+            local url="$1"
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --retry 0 --max-time 90 "$url" || true)
+              if [ "$code" = "200" ]; then
+                echo "$url is awake (attempt $attempt)."
+                return 0
+              fi
+              echo "$url returned HTTP '$code' (attempt $attempt); retrying in 15s."
+              sleep 15
+            done
+            echo "$url did not answer with 200; it may still be starting up."
+            return 1
+          }
+          ping https://finsight-api-0878.onrender.com/api/health || exit 1
+          ping https://finsight-insights-bhra.onrender.com/health || true

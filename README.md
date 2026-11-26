@@ -33,7 +33,7 @@ FinSight is a full-stack personal finance dashboard: multi-account balances, tra
 | Swagger UI | https://finsight-api-0878.onrender.com/swagger-ui.html |
 | FastAPI docs | https://finsight-insights-bhra.onrender.com/docs |
 
-The deployment uses free tiers, so the first request after idle can take 20–40 seconds. The UI shows a “waking up the free backend” banner while it waits.
+The deployment uses free tiers. A keep-alive workflow pings the API every five minutes, the client warms the API up as soon as the login page loads, and the dashboard paints its last cached payload instantly before refreshing in the background.
 
 ## Features
 
@@ -312,7 +312,7 @@ The intended production topology is **Neon + Render (Docker) + Vercel**:
 3. **Vercel** — import `frontend`, framework Vite, build `npm run build`, output `dist`, env `VITE_API_BASE_URL=https://<api>.onrender.com`. `vercel.json` rewrites all routes to `index.html`.
 4. Set the API’s `CORS_ALLOWED_ORIGINS` to the final Vercel URL and redeploy.
 
-Free-tier services sleep after inactivity; the UI’s slow-request banner covers the cold start. The insights page degrades gracefully if the Python service is still waking.
+Free-tier services sleep after inactivity; keep-alive pings plus a warmed-up API on the login screen keep the cold start off the critical path. The insights page degrades gracefully if the Python service is still waking.
 
 ## Design decisions
 
@@ -334,7 +334,7 @@ Free-tier services sleep after inactivity; the UI’s slow-request banner covers
 
 ## Known limitations
 
-- Free-tier hosting sleeps; first load is slow (mitigated with a banner).
+- Free-tier hosting sleeps; the first load after a long idle is still slower than a warm one.
 - Recurrence supports daily, weekly and monthly schedules (no custom RRULEs).
 - CSV import matches existing categories by name and caps at 5,000 rows per file.
 - FX rates are cached per process; a multi-instance deployment would share no cache.

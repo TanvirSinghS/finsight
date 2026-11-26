@@ -18,4 +18,7 @@ USER spring
 COPY --from=build /build/target/finsight-api-1.0.0.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
+# SerialGC and a disabled JMX registry shave startup time in a small free-tier
+# container, where the first request after a cold boot is what users feel.
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-XX:MaxRAMPercentage=75", "-Dspring.jmx.enabled=false", \
+            "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/app.jar"]

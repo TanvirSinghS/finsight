@@ -24,4 +24,13 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
             FROM Transaction t WHERE t.account.id = :accountId
             """)
     BigDecimal netForAccount(@Param("accountId") UUID accountId, @Param("income") TransactionType income);
+
+    /** One query for every account balance instead of one query per account. */
+    @Query("""
+            SELECT t.account.id, COALESCE(SUM(CASE WHEN t.type = :income THEN t.amountBase ELSE -t.amountBase END), 0)
+            FROM Transaction t
+            WHERE t.user.id = :userId
+            GROUP BY t.account.id
+            """)
+    List<Object[]> netByAccount(@Param("userId") UUID userId, @Param("income") TransactionType income);
 }

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { api, getToken, setToken, warmUp } from '../api/client.js';
+import { api, clearDashboardCache, fetchDashboard, getToken, setToken, warmUp } from '../api/client.js';
 
 const AuthContext = createContext(null);
 const USER_KEY = 'finsight.user';
@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     setToken(null);
     cacheUser(null);
+    clearDashboardCache();
     setUser(null);
   }, []);
 
@@ -60,24 +61,34 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handler = () => {
       cacheUser(null);
+      clearDashboardCache();
       setUser(null);
     };
     window.addEventListener('finsight:unauthorized', handler);
     return () => window.removeEventListener('finsight:unauthorized', handler);
   }, []);
 
+  // Load the dashboard in parallel with the route change so it is ready the
+  // moment the page mounts.
+  const preloadDashboard = useCallback(() => {
+    fetchDashboard().catch(() => {});
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const data = await api.post('/api/auth/login', { email, password });
     setToken(data.token);
     cacheUser(data.user);
+    clearDashboardCache();
+    preloadDashboard();
     setUser(data.user);
     return data.user;
-  }, []);
+  }, [preloadDashboard]);
 
   const register = useCallback(async (payload) => {
     const data = await api.post('/api/auth/register', payload);
     setToken(data.token);
     cacheUser(data.user);
+    clearDashboardCache();
     setUser(data.user);
     return data.user;
   }, []);

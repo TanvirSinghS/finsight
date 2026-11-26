@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart,
@@ -7,7 +7,7 @@ import {
 import {
   ArrowDownRight, ArrowUpRight, ArrowRightLeft, PiggyBank, Plus, Sparkles, TrendingUp, Wallet,
 } from 'lucide-react';
-import { api } from '../api/client.js';
+import { fetchDashboard, readDashboardCache } from '../api/client.js';
 import { budgetTone, EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonBlock, StatCard } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -23,21 +23,31 @@ const percentTones = {
 export default function Dashboard() {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Paint the last payload instantly, then reconcile with the API in the background.
+  const [data, setData] = useState(readDashboardCache);
+  const hadCachedData = useRef(data !== null);
+  const [loading, setLoading] = useState(!hadCachedData.current);
   const [error, setError] = useState('');
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError('');
-    api
-      .get('/api/dashboard')
-      .then(setData)
-      .catch((err) => setError(err.message))
+  const load = useCallback(({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
+    return fetchDashboard()
+      .then((payload) => {
+        setData(payload);
+        setError('');
+      })
+      .catch((err) => {
+        if (!silent) setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    load({ silent: hadCachedData.current });
+  }, [load]);
 
   const currency = data?.currency || user?.baseCurrency || 'USD';
   const axisColor = theme === 'dark' ? '#94a3b8' : '#64748b';

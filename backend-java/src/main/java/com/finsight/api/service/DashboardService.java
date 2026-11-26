@@ -37,7 +37,7 @@ public class DashboardService {
         LocalDate start = current.atDay(1);
         LocalDate end = current.atEndOfMonth();
 
-        List<AccountResponse> accounts = accountService.list(userId);
+        List<AccountResponse> accounts = accountService.list(user);
         BigDecimal totalBalance = accounts.stream().map(AccountResponse::balance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal income = money(transactionRepository.sumByType(userId, TransactionType.INCOME, start, end));
@@ -50,7 +50,9 @@ public class DashboardService {
         List<CategorySpend> topCategories = byCategory.stream().limit(5).toList();
 
         List<MonthlyPoint> trend = monthlyTrend(userId, current.minusMonths(5));
-        List<BudgetAlert> alerts = budgetService.list(userId, current.toString()).stream()
+        Map<UUID, BigDecimal> spentByCategory = new HashMap<>();
+        byCategory.forEach(spend -> spentByCategory.put(spend.categoryId(), spend.total()));
+        List<BudgetAlert> alerts = budgetService.listForPeriod(userId, current, spentByCategory).stream()
                 .filter(b -> b.percentUsed() >= 60)
                 .sorted(Comparator.comparingInt(BudgetResponse::percentUsed).reversed())
                 .map(this::toAlert)
