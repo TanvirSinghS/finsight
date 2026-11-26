@@ -16,13 +16,14 @@ export function setToken(token) {
 }
 
 /**
- * Fire-and-forget ping so a sleeping free-tier backend starts booting while the
- * user is still on the login screen. Runs once per page load.
+ * Fire-and-forget ping so a sleeping free-tier backend — and its database —
+ * starts waking while the user is still on the login screen. Runs once per page
+ * load. The actuator health check also touches the database.
  */
 export function warmUp() {
   if (warmStarted) return;
   warmStarted = true;
-  fetch(`${BASE_URL}/api/health`, { headers: { Accept: 'application/json' }, cache: 'no-store' }).catch(() => {});
+  fetch(`${BASE_URL}/actuator/health`, { headers: { Accept: 'application/json' }, cache: 'no-store' }).catch(() => {});
 }
 
 async function request(path, { method = 'GET', body, headers = {}, raw = false, signal } = {}) {
