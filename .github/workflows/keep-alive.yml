@@ -12,6 +12,10 @@ name: Keep API awake
 on:
   schedule:
     - cron: '*/5 * * * *'
+  # Every deploy already wakes the instance; this keeps it awake afterwards
+  # instead of waiting for GitHub to get around to the schedule.
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions: {}
