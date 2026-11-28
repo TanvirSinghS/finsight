@@ -10,6 +10,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>FinSight — Personal Finance, Clarified</title>
+    <script>
+      // Start waking the free-tier API before the app bundle is even parsed. A
+      // sleeping instance needs ~45s to boot, and a head start here is time the
+      // user does not spend staring at the sign-in button.
+      (function () {
+        var base = '%VITE_API_BASE_URL%';
+        if (base.charAt(0) === '%') base = '';
+        base = base.replace(/\/+$/, '');
+        if (/^https?:\/\//i.test(base)) {
+          var link = document.createElement('link');
+          link.rel = 'preconnect';
+          link.href = base;
+          link.crossOrigin = '';
+          document.head.appendChild(link);
+        }
+        window.__finsightWarm = true;
+        fetch(base + '/actuator/health', { cache: 'no-store' }).catch(function () {});
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

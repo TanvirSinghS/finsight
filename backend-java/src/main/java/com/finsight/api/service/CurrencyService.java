@@ -1,10 +1,13 @@
 package com.finsight.api.service;
 
 import com.finsight.api.dto.CurrencyDtos.RatesResponse;
+import com.finsight.api.repository.AccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -14,8 +17,10 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,12 +55,42 @@ public class CurrencyService {
 
     private final RestClient client;
     private final Duration ttl;
+    private final AccountRepository accountRepository;
     private final Map<String, CachedRates> cache = new ConcurrentHashMap<>();
 
     public CurrencyService(@Qualifier("currencyRestClient") RestClient client,
-                           @Value("${app.currency.cache-minutes:360}") long cacheMinutes) {
+                           @Value("${app.currency.cache-minutes:360}") long cacheMinutes,
+                           AccountRepository accountRepository) {
         this.client = client;
         this.ttl = Duration.ofMinutes(cacheMinutes);
+        this.accountRepository = accountRepository;
+    }
+
+    /**
+     * Fetch the rates this installation actually needs while the instance is still
+     * booting, so the first dashboard request after a cold start does not sit on the
+     * FX provider (a 3-6s stall on a free-tier container). Runs off the startup
+     * thread, so boot time and the health check never wait on the network.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void prefetchRates() {
+        List<String> currencies;
+        try {
+            currencies = accountRepository.findDistinctCurrencies();
+        } catch (RuntimeException ex) {
+            log.warn("Skipping FX prefetch: {}", ex.getMessage());
+            return;
+        }
+        CompletableFuture.runAsync(() -> currencies.stream()
+                .filter(code -> code != null && !code.isBlank())
+                .distinct()
+                .forEach(code -> {
+                    try {
+                        rate(code, "USD");
+                    } catch (RuntimeException ex) {
+                        log.debug("FX prefetch for {} failed: {}", code, ex.getMessage());
+                    }
+                }));
     }
 
     public static Map<String, String> supportedCurrencies() {

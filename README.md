@@ -33,7 +33,7 @@ FinSight is a full-stack personal finance dashboard: multi-account balances, tra
 | Swagger UI | https://finsight-api-0878.onrender.com/swagger-ui.html |
 | FastAPI docs | https://finsight-insights-bhra.onrender.com/docs |
 
-The deployment uses free tiers. A keep-alive workflow pings the API every five minutes, the client warms the API up as soon as the login page loads, and the dashboard paints its last cached payload instantly before refreshing in the background.
+The deployment uses free tiers. A keep-alive workflow holds the API warm for most of the day, the client starts waking it from an inline script before the JS bundle loads, and the dashboard paints its last cached payload instantly before refreshing in the background.
 
 ## Features
 
@@ -314,7 +314,7 @@ The intended production topology is **Neon + Render (Docker) + Vercel**:
 3. **Vercel** — import `frontend`, framework Vite, build `npm run build`, output `dist`, env `VITE_API_BASE_URL=https://<api>.onrender.com`. `vercel.json` rewrites all routes to `index.html`.
 4. Set the API’s `CORS_ALLOWED_ORIGINS` to the final Vercel URL and redeploy.
 
-Free-tier services sleep after inactivity; keep-alive pings plus a warmed-up API on the login screen keep the cold start off the critical path. The insights page degrades gracefully if the Python service is still waking.
+Free-tier services sleep after inactivity. GitHub throttles a five-minute cron on a quiet repo to a handful of runs a day, so each keep-alive run now pings the API for hours instead of once, keeping the instance (and its database) warm. FX rates are prefetched in the background while the instance boots so the first dashboard render does not wait on the currency API, and the insights page degrades gracefully if the Python service is still waking.
 
 ## Design decisions
 

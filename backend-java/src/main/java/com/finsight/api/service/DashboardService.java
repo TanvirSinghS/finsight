@@ -44,8 +44,12 @@ public class DashboardService {
         List<AccountResponse> accounts = accountService.list(user);
         BigDecimal totalBalance = accounts.stream().map(AccountResponse::balance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal income = money(transactionRepository.sumByType(userId, TransactionType.INCOME, start, end));
-        BigDecimal expense = money(transactionRepository.sumByType(userId, TransactionType.EXPENSE, start, end));
+        Map<TransactionType, BigDecimal> totals = new EnumMap<>(TransactionType.class);
+        for (Object[] row : transactionRepository.sumByTypeGrouped(userId, start, end)) {
+            totals.put((TransactionType) row[0], money(row[1]));
+        }
+        BigDecimal income = totals.getOrDefault(TransactionType.INCOME, ZERO);
+        BigDecimal expense = totals.getOrDefault(TransactionType.EXPENSE, ZERO);
         BigDecimal net = income.subtract(expense);
         double savingsRate = income.signum() == 0 ? 0
                 : net.multiply(BigDecimal.valueOf(100)).divide(income, 1, RoundingMode.HALF_UP).doubleValue();

@@ -19,6 +19,10 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     boolean existsByUserIdAndNameIgnoreCase(UUID userId, String name);
 
+    /** Currencies in use, so FX rates can be fetched before the first request needs them. */
+    @Query("SELECT DISTINCT a.currency FROM Account a")
+    List<String> findDistinctCurrencies();
+
     @Query("""
             SELECT COALESCE(SUM(CASE WHEN t.type = :income THEN t.amountBase ELSE -t.amountBase END), 0)
             FROM Transaction t WHERE t.account.id = :accountId

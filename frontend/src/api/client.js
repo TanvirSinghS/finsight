@@ -23,6 +23,8 @@ export function setToken(token) {
 export function warmUp() {
   if (warmStarted) return;
   warmStarted = true;
+  // index.html fires the same ping in an inline script before this bundle loads.
+  if (window.__finsightWarm) return;
   fetch(`${BASE_URL}/actuator/health`, { headers: { Accept: 'application/json' }, cache: 'no-store' }).catch(() => {});
 }
 

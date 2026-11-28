@@ -28,13 +28,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     @EntityGraph(attributePaths = {"account", "category"})
     List<Transaction> findByUserIdAndOccurredOnAfterOrderByAmountDesc(UUID userId, LocalDate from);
 
+    /** Income and expense for a window in one round trip instead of two. */
     @Query("""
-            SELECT COALESCE(SUM(t.amountBase), 0) FROM Transaction t
-            WHERE t.user.id = :userId AND t.type = :type
+            SELECT t.type, COALESCE(SUM(t.amountBase), 0) FROM Transaction t
+            WHERE t.user.id = :userId
               AND t.occurredOn BETWEEN :from AND :to
+            GROUP BY t.type
             """)
-    BigDecimal sumByType(@Param("userId") UUID userId, @Param("type") TransactionType type,
-                         @Param("from") LocalDate from, @Param("to") LocalDate to);
+    List<Object[]> sumByTypeGrouped(@Param("userId") UUID userId,
+                                    @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     @Query("""
             SELECT COALESCE(SUM(t.amountBase), 0) FROM Transaction t

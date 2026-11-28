@@ -13,16 +13,32 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waking, setWaking] = useState(false);
 
   const signIn = async (credentials) => {
     setError('');
     setLoading(true);
+    // A free-tier backend that has been idle needs a while to boot; say so
+    // instead of leaving the form looking frozen.
+    const slowTimer = setTimeout(() => setWaking(true), 2000);
     try {
-      await login(credentials.email, credentials.password);
+      try {
+        await login(credentials.email, credentials.password);
+      } catch (err) {
+        // A sleeping instance can answer with a gateway error before it is
+        // listening. Signing in is safe to repeat, so retry once.
+        if (err.status && err.status < 500) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await login(credentials.email, credentials.password);
+      }
       navigate(location.state?.from || '/', { replace: true });
     } catch (err) {
-      setError(err.message || 'Could not sign in.');
+      setError(err.status >= 500
+        ? 'The server is still waking up. Please try again in a few seconds.'
+        : err.message || 'Could not sign in.');
     } finally {
+      clearTimeout(slowTimer);
+      setWaking(false);
       setLoading(false);
     }
   };
@@ -82,6 +98,12 @@ export default function Login() {
             {loading ? <Spinner className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" aria-hidden="true" />}
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
+
+          {waking && loading && (
+            <p role="status" className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Waking the server — the first sign-in after a quiet spell can take up to a minute.
+            </p>
+          )}
         </form>
 
         <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">

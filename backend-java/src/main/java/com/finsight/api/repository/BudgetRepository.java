@@ -10,6 +10,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
+    /** Dashboard and budgets page: categories fetched in the same query, not one per row. */
+    @EntityGraph(attributePaths = {"category"})
     List<Budget> findByUserIdAndPeriodStartOrderByCategoryNameAsc(UUID userId, LocalDate periodStart);
 
     Optional<Budget> findByIdAndUserId(UUID id, UUID userId);
